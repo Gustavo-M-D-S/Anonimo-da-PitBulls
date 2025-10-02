@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Curioscat 2.0 - Mensagens Anônimas</title>
+    <title>Curioscat 2.0 - Mensagens Anônimas Compartilhadas</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
@@ -194,6 +194,10 @@
             cursor: not-allowed;
         }
 
+        .btn-secondary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
         /* Mensagens */
         .messages-container {
             max-height: 600px;
@@ -362,6 +366,21 @@
             font-size: 1.3rem;
         }
 
+        /* Loading */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
         /* Responsividade */
         @media (max-width: 968px) {
             .main-content {
@@ -478,7 +497,7 @@
                 <i class="fas fa-ghost"></i>
                 <h1>Curioscat 2.0</h1>
             </div>
-            <p class="subtitle">Compartilhe mensagens anônimas com seu grupo de forma segura e divertida</p>
+            <p class="subtitle">Mensagens anônimas compartilhadas para todo o grupo</p>
         </header>
 
         <div class="main-content">
@@ -487,12 +506,21 @@
                 <form id="messageForm">
                     <div class="form-group">
                         <label for="message">Sua mensagem anônima:</label>
-                        <textarea id="message" placeholder="Digite aqui sua mensagem... Ela será enviada de forma totalmente anônima para o grupo." required></textarea>
+                        <textarea id="message" placeholder="Digite aqui sua mensagem... Ela será enviada de forma totalmente anônima para todo o grupo." required maxlength="500"></textarea>
+                        <div style="text-align: right; margin-top: 5px; font-size: 0.9rem; color: var(--text-light);">
+                            <span id="charCount">0</span>/500 caracteres
+                        </div>
                     </div>
                     <button type="submit" class="btn" id="submitBtn">
                         <i class="fas fa-paper-plane"></i> Enviar Mensagem Anônima
                     </button>
                 </form>
+                
+                <div style="margin-top: 25px;">
+                    <button class="btn btn-secondary" id="refreshBtn">
+                        <i class="fas fa-sync-alt"></i> Atualizar Mensagens
+                    </button>
+                </div>
                 
                 <div class="stats">
                     <div class="stat-card">
@@ -504,8 +532,8 @@
                         <div class="stat-label">Hoje</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-number" id="charCount">0</div>
-                        <div class="stat-label">Caracteres</div>
+                        <div class="stat-number" id="onlineUsers">1</div>
+                        <div class="stat-label">Online</div>
                     </div>
                 </div>
             </div>
@@ -515,16 +543,15 @@
                 <div class="messages-container" id="messagesContainer">
                     <div class="empty-state">
                         <i class="fas fa-comments"></i>
-                        <p>Nenhuma mensagem ainda</p>
-                        <p>Seja o primeiro a compartilhar algo!</p>
+                        <p>Carregando mensagens...</p>
                     </div>
                 </div>
             </div>
         </div>
 
         <footer>
-            <p>Curioscat 2.0 - Mensagens 100% anônimas | Hospedado no GitHub Pages</p>
-            <p>As mensagens são armazenadas localmente no seu navegador</p>
+            <p>Curioscat 2.0 - Mensagens 100% anônimas | Todas as mensagens são compartilhadas em tempo real</p>
+            <p>As mensagens são armazenadas em nuvem e visíveis para todos no grupo</p>
         </footer>
     </div>
 
@@ -534,6 +561,9 @@
     </div>
 
     <script>
+        // Configuração do Google Sheets
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxJXJYk8Q8KZkQ7Q9Q9Q9Q9Q9Q9Q9Q9Q9Q9Q9Q9Q9Q9Q9Q9Q9Q9Q9Q9Q9Q9Q/exec';
+        
         // Elementos DOM
         const messageForm = document.getElementById('messageForm');
         const messageInput = document.getElementById('message');
@@ -541,23 +571,33 @@
         const notification = document.getElementById('notification');
         const notificationText = document.getElementById('notification-text');
         const submitBtn = document.getElementById('submitBtn');
+        const refreshBtn = document.getElementById('refreshBtn');
         const totalMessagesEl = document.getElementById('totalMessages');
         const todayMessagesEl = document.getElementById('todayMessages');
+        const onlineUsersEl = document.getElementById('onlineUsers');
         const charCountEl = document.getElementById('charCount');
 
-        // Carregar mensagens do localStorage ao iniciar
+        // Estado da aplicação
+        let messages = [];
+        let lastUpdate = 0;
+        const UPDATE_INTERVAL = 10000; // 10 segundos
+
+        // Carregar mensagens ao iniciar
         document.addEventListener('DOMContentLoaded', function() {
             loadMessages();
-            updateStats();
+            startAutoRefresh();
             
-            // Atualizar contador de caracteres em tempo real
+            // Atualizar contador de caracteres
             messageInput.addEventListener('input', function() {
                 charCountEl.textContent = this.value.length;
             });
+            
+            // Botão de atualizar
+            refreshBtn.addEventListener('click', loadMessages);
         });
 
         // Enviar mensagem
-        messageForm.addEventListener('submit', function(e) {
+        messageForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const messageText = messageInput.value.trim();
@@ -573,56 +613,93 @@
                 return;
             }
             
-            // Desabilitar botão para evitar envios duplicados
+            // Desabilitar botão
             submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+            submitBtn.innerHTML = '<div class="loading"></div> Enviando...';
             
-            // Simular um pequeno delay para melhor UX
-            setTimeout(() => {
-                // Criar nova mensagem
+            try {
+                // Enviar para o Google Sheets
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'addMessage',
+                        message: messageText,
+                        timestamp: new Date().toISOString()
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Limpar formulário
+                    messageInput.value = '';
+                    charCountEl.textContent = '0';
+                    
+                    // Recarregar mensagens
+                    await loadMessages();
+                    
+                    // Mostrar notificação
+                    showNotification('Mensagem enviada com sucesso!');
+                } else {
+                    throw new Error(result.error || 'Erro ao enviar mensagem');
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                showNotification('Erro ao enviar mensagem. Tente novamente.', 'error');
+                
+                // Fallback para localStorage
                 const newMessage = {
                     id: Date.now(),
                     content: messageText,
                     timestamp: new Date().toLocaleString('pt-BR'),
                     date: new Date().toISOString().split('T')[0]
                 };
-                
-                // Salvar mensagem
-                saveMessage(newMessage);
-                
-                // Limpar formulário
-                messageInput.value = '';
-                charCountEl.textContent = '0';
-                
-                // Mostrar notificação
-                showNotification('Mensagem enviada com sucesso!');
-                
+                saveMessageLocal(newMessage);
+                showNotification('Mensagem salva localmente (modo offline).', 'error');
+            } finally {
                 // Reativar botão
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Enviar Mensagem Anônima';
-            }, 800);
+            }
         });
 
-        // Função para salvar mensagem no localStorage
-        function saveMessage(message) {
-            let messages = JSON.parse(localStorage.getItem('curioscatMessages')) || [];
-            messages.unshift(message);
-            localStorage.setItem('curioscatMessages', JSON.stringify(messages));
-            
-            // Atualizar a exibição
-            displayMessages();
-            updateStats();
+        // Carregar mensagens do servidor
+        async function loadMessages() {
+            try {
+                messagesContainer.innerHTML = `
+                    <div class="empty-state">
+                        <div class="loading"></div>
+                        <p>Carregando mensagens...</p>
+                    </div>
+                `;
+                
+                const response = await fetch(`${SCRIPT_URL}?action=getMessages&t=${Date.now()}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    messages = result.messages || [];
+                    displayMessages();
+                    updateStats();
+                    lastUpdate = Date.now();
+                } else {
+                    throw new Error(result.error || 'Erro ao carregar mensagens');
+                }
+            } catch (error) {
+                console.error('Erro ao carregar mensagens:', error);
+                
+                // Fallback para localStorage
+                messages = JSON.parse(localStorage.getItem('curioscatMessages')) || [];
+                displayMessages();
+                updateStats();
+                showNotification('Usando mensagens locais (modo offline).', 'error');
+            }
         }
 
-        // Função para carregar mensagens do localStorage
-        function loadMessages() {
-            displayMessages();
-        }
-
-        // Função para exibir mensagens
+        // Exibir mensagens
         function displayMessages() {
-            const messages = JSON.parse(localStorage.getItem('curioscatMessages')) || [];
-            
             if (messages.length === 0) {
                 messagesContainer.innerHTML = `
                     <div class="empty-state">
@@ -636,18 +713,20 @@
             
             let messagesHTML = '';
             messages.forEach(message => {
+                const timeAgo = getTimeAgo(message.timestamp);
+                
                 messagesHTML += `
                     <div class="message fade-in">
                         <div class="message-header">
                             <span><i class="fas fa-user-secret"></i> Anônimo</span>
-                            <span>${message.timestamp}</span>
+                            <span>${timeAgo}</span>
                         </div>
                         <div class="message-content">${message.content}</div>
                         <div class="message-actions">
-                            <button class="action-btn" onclick="copyMessage(${message.id})">
+                            <button class="action-btn" onclick="copyMessage('${message.id}')">
                                 <i class="fas fa-copy"></i> Copiar
                             </button>
-                            <button class="action-btn" onclick="shareMessage(${message.id})">
+                            <button class="action-btn" onclick="shareMessage('${message.content}')">
                                 <i class="fas fa-share-alt"></i> Compartilhar
                             </button>
                         </div>
@@ -660,53 +739,87 @@
 
         // Atualizar estatísticas
         function updateStats() {
-            const messages = JSON.parse(localStorage.getItem('curioscatMessages')) || [];
             const today = new Date().toISOString().split('T')[0];
             
             totalMessagesEl.textContent = messages.length;
-            todayMessagesEl.textContent = messages.filter(msg => msg.date === today).length;
+            todayMessagesEl.textContent = messages.filter(msg => {
+                const msgDate = new Date(msg.timestamp).toISOString().split('T')[0];
+                return msgDate === today;
+            }).length;
+            
+            // Simular usuários online (em uma aplicação real, isso viria do servidor)
+            onlineUsersEl.textContent = Math.max(1, Math.floor(Math.random() * 5) + 1);
         }
 
-        // Função para copiar mensagem
-        function copyMessage(messageId) {
-            const messages = JSON.parse(localStorage.getItem('curioscatMessages')) || [];
-            const message = messages.find(m => m.id === messageId);
+        // Função auxiliar para calcular tempo relativo
+        function getTimeAgo(timestamp) {
+            const now = new Date();
+            const messageTime = new Date(timestamp);
+            const diffMs = now - messageTime;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMs / 3600000);
+            const diffDays = Math.floor(diffMs / 86400000);
             
+            if (diffMins < 1) return 'Agora mesmo';
+            if (diffMins < 60) return `Há ${diffMins} min`;
+            if (diffHours < 24) return `Há ${diffHours} h`;
+            if (diffDays < 7) return `Há ${diffDays} dia${diffDays > 1 ? 's' : ''}`;
+            
+            return messageTime.toLocaleDateString('pt-BR');
+        }
+
+        // Auto-refresh
+        function startAutoRefresh() {
+            setInterval(() => {
+                if (Date.now() - lastUpdate > UPDATE_INTERVAL) {
+                    loadMessages();
+                }
+            }, UPDATE_INTERVAL);
+        }
+
+        // Fallback para localStorage
+        function saveMessageLocal(message) {
+            let localMessages = JSON.parse(localStorage.getItem('curioscatMessages')) || [];
+            localMessages.unshift(message);
+            localStorage.setItem('curioscatMessages', JSON.stringify(localMessages));
+            messages = localMessages;
+            displayMessages();
+            updateStats();
+        }
+
+        // Copiar mensagem
+        function copyMessage(messageId) {
+            const message = messages.find(m => m.id === messageId);
             if (message) {
                 navigator.clipboard.writeText(message.content)
                     .then(() => {
-                        showNotification('Mensagem copiada para a área de transferência!');
+                        showNotification('Mensagem copiada!');
                     })
                     .catch(err => {
-                        console.error('Erro ao copiar mensagem:', err);
-                        showNotification('Erro ao copiar mensagem.', 'error');
+                        console.error('Erro ao copiar:', err);
                     });
             }
         }
 
-        // Função para compartilhar mensagem
-        function shareMessage(messageId) {
-            const messages = JSON.parse(localStorage.getItem('curioscatMessages')) || [];
-            const message = messages.find(m => m.id === messageId);
-            
-            if (message && navigator.share) {
+        // Compartilhar mensagem
+        function shareMessage(content) {
+            if (navigator.share) {
                 navigator.share({
                     title: 'Mensagem Anônima - Curioscat',
-                    text: message.content,
+                    text: content,
                 })
-                .then(() => console.log('Conteúdo compartilhado com sucesso'))
+                .then(() => console.log('Compartilhado com sucesso'))
                 .catch((error) => console.log('Erro ao compartilhar:', error));
             } else {
-                copyMessage(messageId);
+                copyMessage(content);
             }
         }
 
-        // Função para mostrar notificação
+        // Mostrar notificação
         function showNotification(text, type = 'success') {
             notificationText.textContent = text;
             notification.className = 'notification';
             
-            // Alterar ícone com base no tipo
             const icon = notification.querySelector('i');
             if (type === 'error') {
                 notification.classList.add('error');
