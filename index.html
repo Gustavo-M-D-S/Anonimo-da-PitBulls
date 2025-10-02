@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Curioscat 2.0 - Mensagens Anônimas</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #6a11cb;
+            --secondary-color: #2575fc;
+            --accent-color: #ff6b6b;
+            --bg-color: #f8f9fa;
+            --card-color: #ffffff;
+            --text-color: #2d3748;
+            --text-light: #718096;
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            --shadow-hover: 0 8px 30px rgba(0, 0, 0, 0.12);
+            --radius: 16px;
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: var(--text-color);
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 24px;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            padding: 40px 20px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .logo i {
+            font-size: 2.5rem;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+        }
+
+        h1 {
+            font-size: 2.8rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .subtitle {
+            font-size: 1.3rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Layout para Desktop */
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            align-items: start;
+        }
+
+        .card {
+            background-color: var(--card-color);
+            border-radius: var(--radius);
+            padding: 30px;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            height: 100%;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        h2 {
+            margin-bottom: 20px;
+            color: var(--primary-color);
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        h2 i {
+            font-size: 1.3rem;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+            font-size: 1rem;
+            color: var(--text-color);
+        }
+
+        textarea {
+            width: 100%;
+            padding: 18px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: var(--transition);
+            background-color: #f8fafc;
+            min-height: 160px;
+            resize: vertical;
+            line-height: 1.5;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            background-color: white;
+            box-shadow: 0 0 0 3px rgba(106, 17, 203, 0.1);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: 600;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(106, 17, 203, 0.3);
+            width: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(106, 17, 203, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            transform: none;
+            cursor: not-allowed;
+        }
+
+        /* Mensagens */
+        .messages-container {
+            max-height: 600px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .messages-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .messages-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .messages-container::-webkit-scrollbar-thumb {
+            background: var(--primary-color);
+            border-radius: 10px;
+        }
+
+        .message {
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid var(--primary-color);
+            background: linear-gradient(to right, rgba(106, 17, 203, 0.03), rgba(106, 17, 203, 0.01));
+            border-radius: 0 12px 12px 0;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .message:hover {
+            transform: translateX(5px);
+            background: linear-gradient(to right, rgba(106, 17, 203, 0.05), rgba(106, 17, 203, 0.02));
+        }
+
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            font-size: 0.9rem;
+            color: var(--text-light);
+        }
+
+        .message-content {
+            font-size: 1.05rem;
+            line-height: 1.6;
+            color: var(--text-color);
+        }
+
+        .message-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 15px;
+            gap: 12px;
+            opacity: 0;
+            transition: var(--transition);
+        }
+
+        .message:hover .message-actions {
+            opacity: 1;
+        }
+
+        .action-btn {
+            background: none;
+            border: none;
+            color: var(--text-light);
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            padding: 6px 12px;
+            border-radius: 8px;
+            transition: var(--transition);
+        }
+
+        .action-btn:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+            color: var(--primary-color);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-light);
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .empty-state p {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+
+        /* Stats */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 25px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #f0f4ff, #e6eeff);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid #e2e8f0;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--text-light);
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 25px;
+            color: var(--text-light);
+            font-size: 0.95rem;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        /* Notification */
+        .notification {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            padding: 18px 25px;
+            border-radius: 12px;
+            background-color: #4CAF50;
+            color: white;
+            box-shadow: var(--shadow-hover);
+            transform: translateX(150%);
+            transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            max-width: 400px;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.error {
+            background-color: #f44336;
+        }
+
+        .notification i {
+            font-size: 1.3rem;
+        }
+
+        /* Responsividade */
+        @media (max-width: 968px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .container {
+                gap: 20px;
+            }
+            
+            h1 {
+                font-size: 2.2rem;
+            }
+            
+            .card {
+                padding: 25px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 15px;
+            }
+            
+            header {
+                padding: 30px 15px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .subtitle {
+                font-size: 1.1rem;
+            }
+            
+            .card {
+                padding: 20px;
+            }
+            
+            .stats {
+                grid-template-columns: 1fr;
+            }
+            
+            .notification {
+                right: 15px;
+                left: 15px;
+                max-width: none;
+            }
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+            
+            .logo i {
+                font-size: 2rem;
+            }
+            
+            .card {
+                padding: 18px;
+            }
+            
+            textarea {
+                padding: 15px;
+            }
+        }
+
+        /* Animações */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        /* Dark mode opcional */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-color: #1a202c;
+                --card-color: #2d3748;
+                --text-color: #e2e8f0;
+                --text-light: #a0aec0;
+            }
+            
+            body {
+                background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+            }
+            
+            textarea {
+                background-color: #4a5568;
+                border-color: #4a5568;
+                color: #e2e8f0;
+            }
+            
+            textarea:focus {
+                background-color: #2d3748;
+            }
+            
+            .stat-card {
+                background: linear-gradient(135deg, #2d3748, #4a5568);
+                border-color: #4a5568;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <i class="fas fa-ghost"></i>
+                <h1>Curioscat 2.0</h1>
+            </div>
+            <p class="subtitle">Compartilhe mensagens anônimas com seu grupo de forma segura e divertida</p>
+        </header>
+
+        <div class="main-content">
+            <div class="card">
+                <h2><i class="fas fa-paper-plane"></i> Enviar Mensagem</h2>
+                <form id="messageForm">
+                    <div class="form-group">
+                        <label for="message">Sua mensagem anônima:</label>
+                        <textarea id="message" placeholder="Digite aqui sua mensagem... Ela será enviada de forma totalmente anônima para o grupo." required></textarea>
+                    </div>
+                    <button type="submit" class="btn" id="submitBtn">
+                        <i class="fas fa-paper-plane"></i> Enviar Mensagem Anônima
+                    </button>
+                </form>
+                
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalMessages">0</div>
+                        <div class="stat-label">Total de Mensagens</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="todayMessages">0</div>
+                        <div class="stat-label">Hoje</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="charCount">0</div>
+                        <div class="stat-label">Caracteres</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2><i class="fas fa-inbox"></i> Mensagens Recebidas</h2>
+                <div class="messages-container" id="messagesContainer">
+                    <div class="empty-state">
+                        <i class="fas fa-comments"></i>
+                        <p>Nenhuma mensagem ainda</p>
+                        <p>Seja o primeiro a compartilhar algo!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>Curioscat 2.0 - Mensagens 100% anônimas | Hospedado no GitHub Pages</p>
+            <p>As mensagens são armazenadas localmente no seu navegador</p>
+        </footer>
+    </div>
+
+    <div id="notification" class="notification">
+        <i class="fas fa-check-circle"></i>
+        <span id="notification-text"></span>
+    </div>
+
+    <script>
+        // Elementos DOM
+        const messageForm = document.getElementById('messageForm');
+        const messageInput = document.getElementById('message');
+        const messagesContainer = document.getElementById('messagesContainer');
+        const notification = document.getElementById('notification');
+        const notificationText = document.getElementById('notification-text');
+        const submitBtn = document.getElementById('submitBtn');
+        const totalMessagesEl = document.getElementById('totalMessages');
+        const todayMessagesEl = document.getElementById('todayMessages');
+        const charCountEl = document.getElementById('charCount');
+
+        // Carregar mensagens do localStorage ao iniciar
+        document.addEventListener('DOMContentLoaded', function() {
+            loadMessages();
+            updateStats();
+            
+            // Atualizar contador de caracteres em tempo real
+            messageInput.addEventListener('input', function() {
+                charCountEl.textContent = this.value.length;
+            });
+        });
+
+        // Enviar mensagem
+        messageForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const messageText = messageInput.value.trim();
+            
+            if (messageText === '') {
+                showNotification('Por favor, digite uma mensagem.', 'error');
+                messageInput.focus();
+                return;
+            }
+            
+            if (messageText.length > 500) {
+                showNotification('A mensagem deve ter no máximo 500 caracteres.', 'error');
+                return;
+            }
+            
+            // Desabilitar botão para evitar envios duplicados
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+            
+            // Simular um pequeno delay para melhor UX
+            setTimeout(() => {
+                // Criar nova mensagem
+                const newMessage = {
+                    id: Date.now(),
+                    content: messageText,
+                    timestamp: new Date().toLocaleString('pt-BR'),
+                    date: new Date().toISOString().split('T')[0]
+                };
+                
+                // Salvar mensagem
+                saveMessage(newMessage);
+                
+                // Limpar formulário
+                messageInput.value = '';
+                charCountEl.textContent = '0';
+                
+                // Mostrar notificação
+                showNotification('Mensagem enviada com sucesso!');
+                
+                // Reativar botão
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Enviar Mensagem Anônima';
+            }, 800);
+        });
+
+        // Função para salvar mensagem no localStorage
+        function saveMessage(message) {
+            let messages = JSON.parse(localStorage.getItem('curioscatMessages')) || [];
+            messages.unshift(message);
+            localStorage.setItem('curioscatMessages', JSON.stringify(messages));
+            
+            // Atualizar a exibição
+            displayMessages();
+            updateStats();
+        }
+
+        // Função para carregar mensagens do localStorage
+        function loadMessages() {
+            displayMessages();
+        }
+
+        // Função para exibir mensagens
+        function displayMessages() {
+            const messages = JSON.parse(localStorage.getItem('curioscatMessages')) || [];
+            
+            if (messages.length === 0) {
+                messagesContainer.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-comments"></i>
+                        <p>Nenhuma mensagem ainda</p>
+                        <p>Seja o primeiro a compartilhar algo!</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let messagesHTML = '';
+            messages.forEach(message => {
+                messagesHTML += `
+                    <div class="message fade-in">
+                        <div class="message-header">
+                            <span><i class="fas fa-user-secret"></i> Anônimo</span>
+                            <span>${message.timestamp}</span>
+                        </div>
+                        <div class="message-content">${message.content}</div>
+                        <div class="message-actions">
+                            <button class="action-btn" onclick="copyMessage(${message.id})">
+                                <i class="fas fa-copy"></i> Copiar
+                            </button>
+                            <button class="action-btn" onclick="shareMessage(${message.id})">
+                                <i class="fas fa-share-alt"></i> Compartilhar
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            messagesContainer.innerHTML = messagesHTML;
+        }
+
+        // Atualizar estatísticas
+        function updateStats() {
+            const messages = JSON.parse(localStorage.getItem('curioscatMessages')) || [];
+            const today = new Date().toISOString().split('T')[0];
+            
+            totalMessagesEl.textContent = messages.length;
+            todayMessagesEl.textContent = messages.filter(msg => msg.date === today).length;
+        }
+
+        // Função para copiar mensagem
+        function copyMessage(messageId) {
+            const messages = JSON.parse(localStorage.getItem('curioscatMessages')) || [];
+            const message = messages.find(m => m.id === messageId);
+            
+            if (message) {
+                navigator.clipboard.writeText(message.content)
+                    .then(() => {
+                        showNotification('Mensagem copiada para a área de transferência!');
+                    })
+                    .catch(err => {
+                        console.error('Erro ao copiar mensagem:', err);
+                        showNotification('Erro ao copiar mensagem.', 'error');
+                    });
+            }
+        }
+
+        // Função para compartilhar mensagem
+        function shareMessage(messageId) {
+            const messages = JSON.parse(localStorage.getItem('curioscatMessages')) || [];
+            const message = messages.find(m => m.id === messageId);
+            
+            if (message && navigator.share) {
+                navigator.share({
+                    title: 'Mensagem Anônima - Curioscat',
+                    text: message.content,
+                })
+                .then(() => console.log('Conteúdo compartilhado com sucesso'))
+                .catch((error) => console.log('Erro ao compartilhar:', error));
+            } else {
+                copyMessage(messageId);
+            }
+        }
+
+        // Função para mostrar notificação
+        function showNotification(text, type = 'success') {
+            notificationText.textContent = text;
+            notification.className = 'notification';
+            
+            // Alterar ícone com base no tipo
+            const icon = notification.querySelector('i');
+            if (type === 'error') {
+                notification.classList.add('error');
+                icon.className = 'fas fa-exclamation-circle';
+            } else {
+                icon.className = 'fas fa-check-circle';
+            }
+            
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 4000);
+        }
+    </script>
+</body>
+</html>
